@@ -1,3 +1,5 @@
 
 .vscode/launch.json
 *.csv
+latestdata.tar.gz
+data.csv

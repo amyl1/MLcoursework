@@ -18,9 +18,9 @@ from sklearn.impute import SimpleImputer
 """# Load Data"""
 
 df = pd.read_csv("latestdata.csv",low_memory=False)
-df=df[['age','country','date_onset_symptoms','date_admission_hospital','date_confirmation','symptoms','outcome']]
-#df = df.dropna(how='any', subset=['symptoms','outcome'])
-#print(df.head(30))
+df=df[['age','country','date_onset_symptoms','date_admission_hospital','date_confirmation','symptoms','outcome','chronic_disease_binary']]
+
+print(df.head(30))
 
 """# Mapping Data"""
 
@@ -73,12 +73,76 @@ mapSymptom = {
     "cardiogenic shock:acute coronary syndrome:heart failure:pneumonia" : [4,5,6]
 }
 df['symptoms']=df['symptoms'].map(mapSymptom)
-#drop rows with values missing in these two columns
-df=df.dropna(subset=['symptoms'])
-df=df.dropna(subset=['outcome'])
 
-"""Map age ranges to the median of those age ranges. Change ages in months to 0."""
+mapCDB = {
+    "TRUE":1,
+    "FALSE":0
+}
+df['chronic_disease_binary']=df['chronic_disease_binary'].map(mapCDB)
 
-#df1 = df['age'].str.contains("-")
-#print(df1.value_counts())
-print(df.head(20))
+"""Map age ranges to the median of those age ranges (taking the ceiling). Change ages in months to 1."""
+
+mapAge = {
+    "23-24":24,
+    "27-29":28,
+    "35-34":35,
+    "40-49":45,
+    "50-59":55,
+    "60-69":65,
+    "70-79":75,
+    "80-89":85,
+    0.25:0,
+    "0-1":1,
+    "18-50":34,
+    "18-100":59,
+    "18 - 100":59,
+    "15-88":52,
+    "90+":90,
+    "60-":60,
+    "4 months":1,
+    "5 months":1,
+    "5 month":1,
+    "11 month":1,
+    "6 months":1,
+    "7 months":1,
+    "9 month":1,
+    "13 month":2,
+    "18 months":1,
+    "50-":50,
+    "54.9":50,
+    "48-49":49,
+    29.6:30,
+    "6 weeks":1,
+    "74-76":75,
+    
+    "50-100":75,
+    "29.6":30,
+    "26-27":27,
+    
+    "0-60":30,
+    54.9:55,
+    "22-23":23,
+    "50-99":75,
+    "60-100":80,
+    "35-54":45,
+    "87-88":88,
+    "55-74":65,
+    "40-45":43,
+    0.6:1,
+    "0.6":1,
+    "11-12":12,
+    0.4:1,
+    "65-99":82,
+    "14-18":16,
+    "70-100":85,
+    "47-48":48,
+    "30-35":33,
+    "0-19":10,
+    "70-70":70,
+    "37-38":38,
+    "0.4":1,
+    "0.75":1,
+}
+df['age']=df['age'].replace(mapAge)
+print(df['age'].value_counts())
+print(df.head(60))

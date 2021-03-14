@@ -18,9 +18,9 @@ from sklearn.impute import SimpleImputer
 """# Load Data"""
 
 df = pd.read_csv("latestdata.csv",low_memory=False)
-df=df[['age','country','date_onset_symptoms','date_admission_hospital','date_confirmation','symptoms','outcome','chronic_disease_binary']]
+df=df[['age','country','date_onset_symptoms','date_admission_hospital','date_confirmation','symptoms','outcome','chronic_disease_binary','date_death_or_discharge']]
 
-print(df.head(30))
+#print(df.head(30))
 
 """# Mapping Data"""
 
@@ -63,14 +63,14 @@ mapOutcome = {
 
 df['outcome']=df['outcome'].map(mapOutcome)
 mapSymptom = {
-    "fever" : [1],
-    "Mild to moderate" : [3],
-    "Mild:moderate" : [3],
-    "cough, fever" : [1,2],
-    "cough" : [2],
-    "fever, myalgia" : [1],
-    "pneumonia:acute respiratory failure:heart failure" : [4,5],
-    "cardiogenic shock:acute coronary syndrome:heart failure:pneumonia" : [4,5,6]
+    "fever" : [0,1,0,0,0,0,0,0,0],
+    "Mild to moderate" : [1,0,0,0,0,0,0,0,0],
+    "Mild:moderate" : [1,0,0,0,0,0,0,0,0],
+    "cough, fever" : [0,1,1,0,0,0,0,0,0],
+    "cough" : [0,0,1,0,0,0,0,0,0],
+    "fever, myalgia" : [0,1,0,1,0,0,0,0,0],
+    "pneumonia:acute respiratory failure:heart failure" : [0,0,0,0,1,1,1,0,0],
+    "cardiogenic shock:acute coronary syndrome:heart failure:pneumonia" : [0,0,0,0,1,0,1,1,1],
 }
 df['symptoms']=df['symptoms'].map(mapSymptom)
 
@@ -83,15 +83,26 @@ df['chronic_disease_binary']=df['chronic_disease_binary'].map(mapCDB)
 """Map age ranges to the median of those age ranges (taking the ceiling). Change ages in months to 1."""
 
 mapAge = {
+    "10-19":15,
+    "18-65":42,
+    "21-39":30,
     "23-24":24,
     "27-29":28,
+    "20-30":25,
+    "20-29":25,
     "35-34":35,
+    "30-60":45,
+    "30-39":35,
+    "30-40":35,
     "40-49":45,
     "50-59":55,
+    "50-65":58,
+    "50-69":60,
     "60-69":65,
     "70-79":75,
     "80-89":85,
-    0.25:0,
+    "90-99":95,
+    "17-65":41,
     "0-1":1,
     "18-50":34,
     "18-100":59,
@@ -105,22 +116,19 @@ mapAge = {
     "11 month":1,
     "6 months":1,
     "7 months":1,
+    "8 month":1,
     "9 month":1,
     "13 month":2,
-    "18 months":1,
+    "18 months":2,
+    "18 month":2,
     "50-":50,
     "54.9":50,
     "48-49":49,
-    29.6:30,
     "6 weeks":1,
     "74-76":75,
-    
     "50-100":75,
-    "29.6":30,
     "26-27":27,
-    
     "0-60":30,
-    54.9:55,
     "22-23":23,
     "50-99":75,
     "60-100":80,
@@ -128,10 +136,8 @@ mapAge = {
     "87-88":88,
     "55-74":65,
     "40-45":43,
-    0.6:1,
-    "0.6":1,
     "11-12":12,
-    0.4:1,
+    "5-59":32,
     "65-99":82,
     "14-18":16,
     "70-100":85,
@@ -140,9 +146,170 @@ mapAge = {
     "0-19":10,
     "70-70":70,
     "37-38":38,
-    "0.4":1,
-    "0.75":1,
-}
+    "38-68":53,
+    "0-6":3,
+    "0-9":5,
+    "16-17":17,
+    "40-89":65,
+    "13-19":16,
+    "60-60":60,
+    "80-80":80,
+    "0-10":5,
+    "0-18":9,
+    "19-65":41,
+    "60-70":65,
+    "40-50":45,
+    "12-19":16,
+    "18-49":34,
+    "41-60":50,
+    "61-80":70,
+    "18-60":39,
+    "60-99":80,
+    "40-69":55,
+    "30-69":50,
+    "54-56":55,
+    "18-20":19,
+    "17-66":42,
+    "20-39":30,
+    "65-":60,
+    "18-99":59,
+    "34-66":50,
+    "75-":75,
+    "55-":55,
+    "18-":18,
+    "27-40":34,
+    "50-60":55,
+    "30-70":50,
+    "20-70":45,
+    "20-69":45,
+    "22-80":51,
+    "19-77":48,
+    "13-69":41,
+    "0-20":10,
+    "21-72":47,
+    "33-78":56,
+    "16-80":48,
+    "23-72":48,
+    "36-45":40,
+    "8-68":38,
+    "70-82":76,
+    "25-89":57,
+    "11-80":46,
+    "19-75":94,
+    "21-61":41,
+    "22-60":41,
+    "14-60":37,
+    "13-65":39,
+    "4-64":34,
+    "2-87":45,
+    "20-57":39,
+    "23-71":47,
+    "30-61":45.5,
+    "34-44":39,
+    "22-66":44,
+    "5-56":31,
+    "39-77":58,
+    "27-58":43,
+    "25-59":42,
+    "1-42":22,
+    "9-69":39,
+    "23-84":54,
+    "40-41":41,
+    "28-35":32,
+    "80-":80,
+    "21-":21,
+    "60-79":70,
+    "35-39":37,
+    "35-59":47,
+    "80+":80,
+    "5-14":10,
+    "15-34": 25,
+    "0-4":2,
+    "00-04":2,
+    "05-14":10,
+    "45-49":47,
+    "40-44":42,
+    "30-34":32,
+    "20-24":22,
+    "50-54":52,
+    "70-74":72,
+    "25-29":27,
+    "10-14":12,
+    "15-19":17,
+    "55-59":57,
+    "60-64":62,
+    "75-79":77,
+    "85+":85,
+    "65-69":67,
+    "80-84":82,
+    "5-9":7,
+
+  }
 df['age']=df['age'].replace(mapAge)
-print(df['age'].value_counts())
-print(df.head(60))
+#print(df['age'].value_counts())
+#print(df['symptoms'].value_counts())
+#print(df.head(30))
+
+"""Impute Age"""
+
+imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+df['age']=imp.fit_transform(df[['age']]).ravel()
+
+"""Add missing values
+
+Replace NaN with 0 in outcome and chronic_disease_binary.
+Replace NaN 
+
+
+"""
+
+df['outcome'] = df['outcome'].fillna(0.0)
+df['chronic_disease_binary'] = df['chronic_disease_binary'].fillna(0.0)
+
+df.loc[df['symptoms'].isnull(),['symptoms']] = df.loc[df['symptoms'].isnull(),'symptoms'].apply(lambda x: [0,0,0,0,0,0,0,0,0])
+print(df['symptoms'].head(20))
+
+"""Drop rows missing date_death_or_discharge. As there were a a large number of rows missing values, imputing them was not a suitable option. Convert into datetime format and calculate the difference."""
+
+#df = df[df['date_confirmation'].notna()]
+#check this
+#df['date_death_or_discharge']=pd.to_datetime(df['date_death_or_discharge'],format = '%d/%m/%Y')
+#df['date_confirmation']=pd.to_datetime(df['date_confirmation'])
+
+for ind in df.index: 
+  try:
+    df['date_confirmation'][ind]=pd.to_datetime(df['date_confirmation'][ind],format = '%d/%m/%Y')
+  except:
+    df['date_confirmation'][ind]=np.NaN
+for ind in df.index:
+  print(df['date_death_or_discharge'][ind])
+  try:
+    df['date_death_or_discharge'][ind]=pd.to_datetime(df['date_death_or_discharge'][ind],format = '%d/%m/%Y')
+  except:
+    df['date_death_or_discharge'][ind]=np.NaN
+#df = df[df['date_death_or_discharge'].notna()]
+
+#df = df[df['date_confirmation'].notna()]
+
+df['day_diff']=abs(df['date_death_or_discharge']-df['date_confirmation'])
+#print(df['date_death_or_discharge'].head(20))
+#print(df['date_onset_symptoms'].head(20))
+print(df['day_diff'].head(20))
+
+asia = ["Singapore","China","Vietnam","South Korea","Malaysia","Philippines","Japan","Iran","United Arab Emirates","Nepal"]
+southAmerica=["Brazil","Guyana"]
+northAmerica=["United States", "Canada"]
+europe=["Italy","France","Switzerland","Germany","San Marino","United Kingdom"]
+africa=["Zimbabwe","Ethiopia","Gambia","Niger"]
+oceania=["Australia"]
+
+continents = {country: 'Asia' for country in asia}
+continents.update({country: 'southAmerica' for country in southAmerica})
+continents.update({country: 'northAmerica' for country in northAmerica})
+continents.update({country: 'europe' for country in europe})
+continents.update({country: 'africa' for country in africa})
+continents.update({country: 'oceania' for country in oceania})
+
+df['continent'] = df['country'].map(continents)
+#print(df['continent'].value_counts())
+print(df.head(50))

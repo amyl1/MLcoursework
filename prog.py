@@ -21,7 +21,7 @@ Excluding any columns that will not be used
 
 df = pd.read_csv("latestdata.csv",low_memory=False)
 
-df=df[['age','country','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary','date_death_or_discharge','travel_history_binary']]
+df=df[['age','country','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary','travel_history_binary']]
 
 """# Mapping Data
 
@@ -283,7 +283,7 @@ continents.update({country: 'europe' for country in europe})
 continents.update({country: 'africa' for country in africa})
 continents.update({country: 'oceania' for country in oceania})
 df['continent'] = df['country'].map(continents)
-df=df[['age','continent','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary','date_death_or_discharge','travel_history_binary']]
+df=df[['age','continent','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary',,'travel_history_binary']]
 
 """# Combatting Missing Data
 
@@ -317,5 +317,9 @@ df['date_confirmation'] = pd.to_datetime(df['date_confirmation'], errors='coerce
 
 df['day_diff']=abs(df['date_onset_symptoms']-df['date_confirmation'])
 df = df[df['day_diff'].notna()]
+
+"""Remove date_onset_symptoms or date_confirmation columns"""
+
+df=df[['age','continent','day_diff','symptoms','outcome','chronic_disease_binary','travel_history_binary']]
 
 print(df.head(50))

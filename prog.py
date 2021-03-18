@@ -17,10 +17,13 @@ from sklearn.impute import SimpleImputer
 
 """# Load Data"""
 
-df = pd.read_csv("latestdata.csv",low_memory=False)
-df=df[['age','country','date_onset_symptoms','date_admission_hospital','date_confirmation','symptoms','outcome','chronic_disease_binary','date_death_or_discharge']]
+df = pd.read_csv("latestdata.csv",low_memory=False, parse_dates = True)
 
-#print(df.head(30))
+df=df[['age','country','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary','date_death_or_discharge','travel_history_binary']]
+
+print(df.head(30))
+
+df.shape[0]
 
 """# Mapping Data"""
 
@@ -265,36 +268,35 @@ Replace NaN
 
 df['outcome'] = df['outcome'].fillna(0.0)
 df['chronic_disease_binary'] = df['chronic_disease_binary'].fillna(0.0)
+df['travel_history_binary'] = df['travel_history_binary'].fillna(0)
+mapTHB = {
+    "TRUE":1,
+    "FALSE":0
+}
+df['travel_history_binary']=df['travel_history_binary'].replace(mapTHB)
 
 df.loc[df['symptoms'].isnull(),['symptoms']] = df.loc[df['symptoms'].isnull(),'symptoms'].apply(lambda x: [0,0,0,0,0,0,0,0,0])
 print(df['symptoms'].head(20))
 
-"""Drop rows missing date_death_or_discharge. As there were a a large number of rows missing values, imputing them was not a suitable option. Convert into datetime format and calculate the difference."""
-
-#df = df[df['date_confirmation'].notna()]
-#check this
-#df['date_death_or_discharge']=pd.to_datetime(df['date_death_or_discharge'],format = '%d/%m/%Y')
-#df['date_confirmation']=pd.to_datetime(df['date_confirmation'])
+"""Drop rows missing date_death_or_discharge. As there were a a large number of rows missing values, imputing them was not a suitable option. Convert into datetime format and calculate the difference.
 
 for ind in df.index: 
   try:
-    df['date_confirmation'][ind]=pd.to_datetime(df['date_confirmation'][ind],format = '%d/%m/%Y')
+    df['date_confirmation'][ind]=pd.to_datetime(df['date_confirmation'][ind],dayfirst=True)
   except:
     df['date_confirmation'][ind]=np.NaN
 for ind in df.index:
-  print(df['date_death_or_discharge'][ind])
+  #print(df['date_death_or_discharge'][ind])
   try:
-    df['date_death_or_discharge'][ind]=pd.to_datetime(df['date_death_or_discharge'][ind],format = '%d/%m/%Y')
+    df['date_onset_symptoms'][ind]=pd.to_datetime(df['date_onset_symptoms'][ind], dayfirst=True)
   except:
-    df['date_death_or_discharge'][ind]=np.NaN
-#df = df[df['date_death_or_discharge'].notna()]
-
-#df = df[df['date_confirmation'].notna()]
-
-df['day_diff']=abs(df['date_death_or_discharge']-df['date_confirmation'])
+    df['date_onset_symptoms'][ind]=np.NaN
+  df['day_diff']=df['date_death_or_discharge']-df['date_confirmation']
 #print(df['date_death_or_discharge'].head(20))
-#print(df['date_onset_symptoms'].head(20))
+#print(df['date_confirmation'].head(20))
 print(df['day_diff'].head(20))
+""
+"""
 
 asia = ["Singapore","China","Vietnam","South Korea","Malaysia","Philippines","Japan","Iran","United Arab Emirates","Nepal"]
 southAmerica=["Brazil","Guyana"]
@@ -312,4 +314,23 @@ continents.update({country: 'oceania' for country in oceania})
 
 df['continent'] = df['country'].map(continents)
 #print(df['continent'].value_counts())
+print(df.head(50))
+
+df.drop(columns=['country'])
+df = df[df['date_onset_symptoms'].notna()]
+
+df['date_onset_symptoms'] = pd.to_datetime(df['date_onset_symptoms'], errors='coerce')
+df['date_confirmation'] = pd.to_datetime(df['date_confirmation'], errors='coerce')
+#df = df.dropna(subset=['Date'])
+df = df[df['date_onset_symptoms'].notna()]
+df = df[df['date_confirmation'].notna()]
+
+print(df['date_onset_symptoms'].value_counts())
+print(df['date_confirmation'].value_counts())
+
+df['day_diff']=abs(df['date_onset_symptoms']-df['date_confirmation'])
+print(df[['date_onset_symptoms', 'date_confirmation','day_diff']].head(50))
+#df.drop(columns=['date_onset_symptoms'])
+#df.drop(columns=['date_confirmation'])
+
 print(df.head(50))

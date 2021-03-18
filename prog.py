@@ -15,17 +15,18 @@ import math
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 
-"""# Load Data"""
+"""# Load Data
+Excluding any columns that will not be used
+"""
 
-df = pd.read_csv("latestdata.csv",low_memory=False, parse_dates = True)
+df = pd.read_csv("latestdata.csv",low_memory=False)
 
 df=df[['age','country','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary','date_death_or_discharge','travel_history_binary']]
 
-print(df.head(30))
+"""# Mapping Data
 
-df.shape[0]
-
-"""# Mapping Data"""
+Map patient outcome to show severity of illness. Mapped to 0 if the patitent recovered, map to 1 if the patient died or ended up in a critical condition.
+"""
 
 mapOutcome = {
     "Alive": 0,
@@ -63,8 +64,10 @@ mapOutcome = {
     "treated in an intensive care unit (14.02.2020)": 0,
     "unstable": 0,
 }
-
 df['outcome']=df['outcome'].map(mapOutcome)
+
+"""Create a vector of symptoms"""
+
 mapSymptom = {
     "fever" : [0,1,0,0,0,0,0,0,0],
     "Mild to moderate" : [1,0,0,0,0,0,0,0,0],
@@ -77,13 +80,15 @@ mapSymptom = {
 }
 df['symptoms']=df['symptoms'].map(mapSymptom)
 
+"""Map chronic disease binary to 0 or 1 based on False or True"""
+
 mapCDB = {
     "TRUE":1,
     "FALSE":0
 }
 df['chronic_disease_binary']=df['chronic_disease_binary'].map(mapCDB)
 
-"""Map age ranges to the median of those age ranges (taking the ceiling). Change ages in months to 1."""
+"""Map age ranges to the median of those age ranges (taking the ceiling). If age given in months, round up to the next year"""
 
 mapAge = {
     "10-19":15,
@@ -249,54 +254,20 @@ mapAge = {
 
   }
 df['age']=df['age'].replace(mapAge)
-#print(df['age'].value_counts())
-#print(df['symptoms'].value_counts())
-#print(df.head(30))
 
-"""Impute Age"""
-
-imp = SimpleImputer(missing_values=np.nan, strategy='mean')
-df['age']=imp.fit_transform(df[['age']]).ravel()
-
-"""Add missing values
-
-Replace NaN with 0 in outcome and chronic_disease_binary.
-Replace NaN 
+"""
+Map travel_history_binary to 1 or 0 based on true and false
 
 
 """
 
-df['outcome'] = df['outcome'].fillna(0.0)
-df['chronic_disease_binary'] = df['chronic_disease_binary'].fillna(0.0)
-df['travel_history_binary'] = df['travel_history_binary'].fillna(0)
 mapTHB = {
     "TRUE":1,
     "FALSE":0
 }
 df['travel_history_binary']=df['travel_history_binary'].replace(mapTHB)
 
-df.loc[df['symptoms'].isnull(),['symptoms']] = df.loc[df['symptoms'].isnull(),'symptoms'].apply(lambda x: [0,0,0,0,0,0,0,0,0])
-print(df['symptoms'].head(20))
-
-"""Drop rows missing date_death_or_discharge. As there were a a large number of rows missing values, imputing them was not a suitable option. Convert into datetime format and calculate the difference.
-
-for ind in df.index: 
-  try:
-    df['date_confirmation'][ind]=pd.to_datetime(df['date_confirmation'][ind],dayfirst=True)
-  except:
-    df['date_confirmation'][ind]=np.NaN
-for ind in df.index:
-  #print(df['date_death_or_discharge'][ind])
-  try:
-    df['date_onset_symptoms'][ind]=pd.to_datetime(df['date_onset_symptoms'][ind], dayfirst=True)
-  except:
-    df['date_onset_symptoms'][ind]=np.NaN
-  df['day_diff']=df['date_death_or_discharge']-df['date_confirmation']
-#print(df['date_death_or_discharge'].head(20))
-#print(df['date_confirmation'].head(20))
-print(df['day_diff'].head(20))
-""
-"""
+"""Map countires to conitents. Create a new column for continent and drop the country column"""
 
 asia = ["Singapore","China","Vietnam","South Korea","Malaysia","Philippines","Japan","Iran","United Arab Emirates","Nepal"]
 southAmerica=["Brazil","Guyana"]
@@ -311,26 +282,40 @@ continents.update({country: 'northAmerica' for country in northAmerica})
 continents.update({country: 'europe' for country in europe})
 continents.update({country: 'africa' for country in africa})
 continents.update({country: 'oceania' for country in oceania})
-
 df['continent'] = df['country'].map(continents)
-#print(df['continent'].value_counts())
-print(df.head(50))
+df=df[['age','continent','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary','date_death_or_discharge','travel_history_binary']]
 
-df.drop(columns=['country'])
-df = df[df['date_onset_symptoms'].notna()]
+"""# Combatting Missing Data
 
-df['date_onset_symptoms'] = pd.to_datetime(df['date_onset_symptoms'], errors='coerce')
-df['date_confirmation'] = pd.to_datetime(df['date_confirmation'], errors='coerce')
-#df = df.dropna(subset=['Date'])
-df = df[df['date_onset_symptoms'].notna()]
-df = df[df['date_confirmation'].notna()]
+Impute age using mean strategy
+"""
 
-print(df['date_onset_symptoms'].value_counts())
-print(df['date_confirmation'].value_counts())
+imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+df['age']=imp.fit_transform(df[['age']]).ravel()
+
+"""Replace NaN with 0 in outcome, chronic_disease_binary, travel_history_binary.
+
+
+"""
+
+df['outcome'] = df['outcome'].fillna(0.0)
+df['chronic_disease_binary'] = df['chronic_disease_binary'].fillna(0.0)
+df['travel_history_binary'] = df['travel_history_binary'].fillna(0)
+
+"""If no symptoms recorded, but 0 in every position in the vector"""
+
+df.loc[df['symptoms'].isnull(),['symptoms']] = df.loc[df['symptoms'].isnull(),'symptoms'].apply(lambda x: [0,0,0,0,0,0,0,0,0])
+
+"""# Process Dates
+Use pandas.to_datetime to parse the dates
+"""
+
+df['date_onset_symptoms'] = pd.to_datetime(df['date_onset_symptoms'], errors='coerce',dayfirst=True)
+df['date_confirmation'] = pd.to_datetime(df['date_confirmation'], errors='coerce',dayfirst=True)
+
+"""Calculate the difference between date_onset_symptoms or date_confirmation. Drop any missing rows"""
 
 df['day_diff']=abs(df['date_onset_symptoms']-df['date_confirmation'])
-print(df[['date_onset_symptoms', 'date_confirmation','day_diff']].head(50))
-#df.drop(columns=['date_onset_symptoms'])
-#df.drop(columns=['date_confirmation'])
+df = df[df['day_diff'].notna()]
 
 print(df.head(50))

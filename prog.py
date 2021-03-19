@@ -14,6 +14,10 @@ import numpy as np
 import math
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
+from sklearn import linear_model
+from sklearn.cluster import KMeans
+from sklearn.linear_model import LogisticRegression
+import matplotlib.pyplot as plt
 
 """# Load Data
 Excluding any columns that will not be used
@@ -258,12 +262,13 @@ df['age']=df['age'].replace(mapAge)
 """
 Map travel_history_binary to 1 or 0 based on true and false
 
-
 """
 
 mapTHB = {
     "TRUE":1,
-    "FALSE":0
+    "FALSE":0,
+    False:0,
+    True:1,
 }
 df['travel_history_binary']=df['travel_history_binary'].replace(mapTHB)
 
@@ -276,14 +281,14 @@ europe=["Italy","France","Switzerland","Germany","San Marino","United Kingdom"]
 africa=["Zimbabwe","Ethiopia","Gambia","Niger"]
 oceania=["Australia"]
 
-continents = {country: 'Asia' for country in asia}
-continents.update({country: 'southAmerica' for country in southAmerica})
-continents.update({country: 'northAmerica' for country in northAmerica})
-continents.update({country: 'europe' for country in europe})
-continents.update({country: 'africa' for country in africa})
-continents.update({country: 'oceania' for country in oceania})
+continents = {country: 1 for country in asia}
+continents.update({country: 2 for country in southAmerica})
+continents.update({country: 3 for country in northAmerica})
+continents.update({country: 4 for country in europe})
+continents.update({country: 5 for country in africa})
+continents.update({country: 6 for country in oceania})
 df['continent'] = df['country'].map(continents)
-df=df[['age','continent','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary',,'travel_history_binary']]
+df=df[['age','continent','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary','travel_history_binary']]
 
 """# Combatting Missing Data
 
@@ -306,6 +311,10 @@ df['travel_history_binary'] = df['travel_history_binary'].fillna(0)
 
 df.loc[df['symptoms'].isnull(),['symptoms']] = df.loc[df['symptoms'].isnull(),'symptoms'].apply(lambda x: [0,0,0,0,0,0,0,0,0])
 
+"""Drop rows with missing continent"""
+
+df = df[df['continent'].notna()]
+
 """# Process Dates
 Use pandas.to_datetime to parse the dates
 """
@@ -315,11 +324,68 @@ df['date_confirmation'] = pd.to_datetime(df['date_confirmation'], errors='coerce
 
 """Calculate the difference between date_onset_symptoms or date_confirmation. Drop any missing rows"""
 
-df['day_diff']=abs(df['date_onset_symptoms']-df['date_confirmation'])
+df['day_diff']=abs(df['date_onset_symptoms']-df['date_confirmation']).dt.days
 df = df[df['day_diff'].notna()]
 
 """Remove date_onset_symptoms or date_confirmation columns"""
 
-df=df[['age','continent','day_diff','symptoms','outcome','chronic_disease_binary','travel_history_binary']]
+#add symptoms back?
+df=df[['age','continent','day_diff','outcome','chronic_disease_binary','travel_history_binary','symptoms']]
 
-print(df.head(50))
+"""# Split the data into train and test sets"""
+
+x=df[['age','continent','day_diff','chronic_disease_binary','travel_history_binary','symptoms']]
+y = df['outcome']
+print(x.shape,y.shape)
+X_train_0, X_test_0, y_train, y_test = train_test_split(x, y, test_size=0.45, random_state=0)
+print(df.dtypes)
+print(y.shape)
+
+def correlation_matrix(y, x, is_plot=False):
+  # Calculate and plot the correlation symmetrical matrix
+  # Return:
+  # yX - concatenated data
+  # yX_corr - correlation matrix, pearson correlation of values from -1 to +1
+  # yX_abs_corr - correlation matrix, absolute values
+  
+  yX = pd.concat([y, x], axis=1)
+ 
+  print("Function correlation_matrix: X.shape, y.shape, yX.shape:", X.shape, y.shape, yX.shape)
+  print()
+
+  # Get feature correlations and transform to dataframe
+  yX_corr = yX.corr(method='pearson')
+
+  # Convert to abolute values
+  yX_abs_corr = np.abs(yX_corr) 
+  
+  if is_plot:
+    plt.figure(figsize=(10, 10))
+    plt.imshow(yX_abs_corr, cmap='RdYlGn', interpolation='none', aspect='auto')
+    plt.colorbar()
+    plt.xticks(range(len(yX_abs_corr)), yX_abs_corr.columns, rotation='vertical')
+    plt.yticks(range(len(yX_abs_corr)), yX_abs_corr.columns);
+    plt.suptitle('Pearson Correlation Heat Map (absolute values)', fontsize=15, fontweight='bold')
+    plt.show()
+  
+  return yX, yX_corr, yX_abs_corr
+
+# Build the correlation matrix for the train data
+yX, yX_corr, yX_abs_corr = correlation_matrix(y_train, X_train_0, is_plot=True)
+
+"""# Model 1 """
+
+dt = DecisionTreeClassifier(labeCol='outcome',featuresCol='features_vector',maxDepth=3)
+dt_model=dt.fit(training)
+dt_pred=dt_model.transform(validation)
+dt_pred.show(5)
+
+"""# Model 2"""
+
+logreg = LogisticRegression()
+ 
+logreg.fit(x, y)
+
+
+
+"""# Model 3"""

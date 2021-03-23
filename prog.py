@@ -14,7 +14,9 @@ import numpy as np
 import math
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
+from sklearn import svm
 from sklearn import linear_model
+from sklearn import metrics
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LogisticRegression
 import matplotlib.pyplot as plt
@@ -333,15 +335,16 @@ df = df[df['day_diff'].notna()]
 
 """Remove date_onset_symptoms or date_confirmation columns"""
 
-#use symptoms?
-df=df[['age','continent','day_diff','outcome','chronic_disease_binary','travel_history_binary',]]
+#use symptoms
+df=df[['age','continent','day_diff','outcome','chronic_disease_binary','travel_history_binary']]
 
 """# Split the data into train and test sets"""
 
+#use symptoms?
 x=df[['age','continent','chronic_disease_binary','travel_history_binary','day_diff']]
 y = df['outcome']
 print(x.shape,y.shape)
-X_train_0, X_test_0, y_train, y_test = train_test_split(x, y, test_size=0.45, random_state=0)
+x_train_0, x_test_0, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=0)
 print(df.dtypes)
 print(y.shape)
 
@@ -370,9 +373,9 @@ def correlation_matrix(y, x, is_plot=False):
   return yX, yX_corr, yX_abs_corr
 
 # Build the correlation matrix for the train data
-yX, yX_corr, yX_abs_corr = correlation_matrix(y_train, X_train_0, is_plot=True)
+yX, yX_corr, yX_abs_corr = correlation_matrix(y_train, x_train_0, is_plot=True)
 
-CORRELATION_MIN = 0.05
+CORRELATION_MIN = 0.04
 DISPLAY_PRECISION = 4 
 # Sort features by their pearson correlation with the target value
 s_corr_target = yX_abs_corr['outcome']
@@ -397,4 +400,17 @@ for i,v in enumerate(s_corr_target_sort):
     continue
     
   print(i,np.round(v, DISPLAY_PRECISION), ftr)
+
+"""# Model 1: Support Vector Machines"""
+
+clf = svm.SVC(kernel='linear')
+clf.fit(x_train_0, y_train)
+pred = clf.predict(x_test_0)
+
+print("Accuracy:",metrics.accuracy_score(y_test, pred))
+print("Precision:",metrics.precision_score(y_test, pred))
+
+from sklearn.metrics import classification_report, confusion_matrix
+print(confusion_matrix(y_test,pred))
+print(classification_report(y_test,pred))
 

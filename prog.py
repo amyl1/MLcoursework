@@ -27,14 +27,16 @@ df = pd.read_csv("latestdata.csv",low_memory=False)
 
 df=df[['age','country','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary','travel_history_binary']]
 
+print(df.shape)
+
 """# Mapping Data
 
-Map patient outcome to show severity of illness. Mapped to 0 if the patitent recovered, map to 1 if the patient died or ended up in a critical condition.
+Map patient outcome to show severity of illness. Mapped to 0 if the patitent recovered, map to 1 if the patient died
 """
 
 mapOutcome = {
     "Alive": 0,
-    "Critical condition": 1, 
+    "Critical condition": 0, 
     "Dead": 1,
     "Death": 1,
     "Deceased": 1,
@@ -49,8 +51,8 @@ mapOutcome = {
     "Stable": 0,
     "Symptoms only improved with cough. Currently hospitalized for follow-up.": 0,
     "Under treatment": 0,
-    "critical condition": 1,
-    "critical condition, intubated as of 14.02.2020": 1,
+    "critical condition": 0,
+    "critical condition, intubated as of 14.02.2020": 0,
     "dead": 1,
     "death": 1,
     "died": 1,
@@ -61,8 +63,8 @@ mapOutcome = {
     "recovered": 0,
     "recovering at home 03.03.2020" : 0,
     "released from quarantine": 0,
-    "severe": 1,
-    "severe illness": 1,
+    "severe": 0,
+    "severe illness": 0,
     "stable": 0,
     "stable condition": 0,
     "treated in an intensive care unit (14.02.2020)": 0,
@@ -88,11 +90,13 @@ df['symptoms']=df['symptoms'].map(mapSymptom)
 
 mapCDB = {
     "TRUE":1,
-    "FALSE":0
+    "FALSE":0,
+    False:0,
+    True:1,
 }
 df['chronic_disease_binary']=df['chronic_disease_binary'].map(mapCDB)
 
-"""Map age ranges to the median of those age ranges (taking the ceiling). If age given in months, round up to the next year"""
+"""Map age ranges to the median of those age ranges (taking the ceiling). If age given in months, round to closest year"""
 
 mapAge = {
     "10-19":15,
@@ -122,21 +126,21 @@ mapAge = {
     "15-88":52,
     "90+":90,
     "60-":60,
-    "4 months":1,
-    "5 months":1,
-    "5 month":1,
+    "4 months":0,
+    "5 months":0,
+    "5 month":0,
     "11 month":1,
     "6 months":1,
     "7 months":1,
     "8 month":1,
     "9 month":1,
-    "13 month":2,
+    "13 month":1,
     "18 months":2,
     "18 month":2,
     "50-":50,
     "54.9":50,
     "48-49":49,
-    "6 weeks":1,
+    "6 weeks":0,
     "74-76":75,
     "50-100":75,
     "26-27":27,
@@ -329,12 +333,12 @@ df = df[df['day_diff'].notna()]
 
 """Remove date_onset_symptoms or date_confirmation columns"""
 
-#add symptoms back?
-df=df[['age','continent','day_diff','outcome','chronic_disease_binary','travel_history_binary','symptoms']]
+#use symptoms?
+df=df[['age','continent','day_diff','outcome','chronic_disease_binary','travel_history_binary',]]
 
 """# Split the data into train and test sets"""
 
-x=df[['age','continent','day_diff','chronic_disease_binary','travel_history_binary','symptoms']]
+x=df[['age','continent','chronic_disease_binary','travel_history_binary','day_diff']]
 y = df['outcome']
 print(x.shape,y.shape)
 X_train_0, X_test_0, y_train, y_test = train_test_split(x, y, test_size=0.45, random_state=0)
@@ -342,15 +346,10 @@ print(df.dtypes)
 print(y.shape)
 
 def correlation_matrix(y, x, is_plot=False):
-  # Calculate and plot the correlation symmetrical matrix
-  # Return:
-  # yX - concatenated data
-  # yX_corr - correlation matrix, pearson correlation of values from -1 to +1
-  # yX_abs_corr - correlation matrix, absolute values
   
   yX = pd.concat([y, x], axis=1)
  
-  print("Function correlation_matrix: X.shape, y.shape, yX.shape:", X.shape, y.shape, yX.shape)
+  print("Function correlation_matrix: X.shape, y.shape, yX.shape:", x.shape, y.shape, yX.shape)
   print()
 
   # Get feature correlations and transform to dataframe
@@ -373,19 +372,29 @@ def correlation_matrix(y, x, is_plot=False):
 # Build the correlation matrix for the train data
 yX, yX_corr, yX_abs_corr = correlation_matrix(y_train, X_train_0, is_plot=True)
 
-"""# Model 1 """
+CORRELATION_MIN = 0.05
+DISPLAY_PRECISION = 4 
+# Sort features by their pearson correlation with the target value
+s_corr_target = yX_abs_corr['outcome']
+s_corr_target_sort = s_corr_target.sort_values(ascending=False)
 
-dt = DecisionTreeClassifier(labeCol='outcome',featuresCol='features_vector',maxDepth=3)
-dt_model=dt.fit(training)
-dt_pred=dt_model.transform(validation)
-dt_pred.show(5)
+# Only use features with a minimum pearson correlation with the target of 0.05
+s_low_correlation_ftrs = s_corr_target_sort[s_corr_target_sort <= CORRELATION_MIN]
 
-"""# Model 2"""
+# Print
+print("Removed %d low correlation features:" % len(s_low_correlation_ftrs))
+for i,v in enumerate(s_low_correlation_ftrs):
+  print(i,np.round(v, DISPLAY_PRECISION), s_low_correlation_ftrs.index[i])
+  
+print("---")
 
-logreg = LogisticRegression()
- 
-logreg.fit(x, y)
+s_corr_target_sort = s_corr_target_sort[s_corr_target_sort > CORRELATION_MIN]
 
+print("Remaining %d feature correlations:" % (len(s_corr_target_sort)-1))
+for i,v in enumerate(s_corr_target_sort):
+  ftr = s_corr_target_sort.index[i]
+  if ftr == 'TARGET':
+    continue
+    
+  print(i,np.round(v, DISPLAY_PRECISION), ftr)
 
-
-"""# Model 3"""

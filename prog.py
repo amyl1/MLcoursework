@@ -17,9 +17,14 @@ from sklearn.impute import SimpleImputer
 from sklearn import svm
 from sklearn import linear_model
 from sklearn import metrics
+from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LogisticRegression
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt 
+from sklearn.datasets import make_regression
+from sklearn.model_selection import train_test_split
+from sklearn.feature_selection import SelectKBest
+from sklearn.metrics import mean_absolute_error
 
 """# Load Data
 Excluding any columns that will not be used
@@ -343,74 +348,78 @@ df=df[['age','continent','day_diff','outcome','chronic_disease_binary','travel_h
 #use symptoms?
 x=df[['age','continent','chronic_disease_binary','travel_history_binary','day_diff']]
 y = df['outcome']
-print(x.shape,y.shape)
-x_train_0, x_test_0, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=0)
-print(df.dtypes)
-print(y.shape)
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=1)
+
+print('Train', x_train.shape, y_train.shape)
+print('Test', x_test.shape, y_test.shape)
 
 def correlation_matrix(y, x, is_plot=False):
   
   yX = pd.concat([y, x], axis=1)
- 
-  print("Function correlation_matrix: X.shape, y.shape, yX.shape:", x.shape, y.shape, yX.shape)
-  print()
-
-  # Get feature correlations and transform to dataframe
   yX_corr = yX.corr(method='pearson')
-
-  # Convert to abolute values
   yX_abs_corr = np.abs(yX_corr) 
   
   if is_plot:
-    plt.figure(figsize=(10, 10))
+    plt.figure(figsize=(8, 8))
     plt.imshow(yX_abs_corr, cmap='RdYlGn', interpolation='none', aspect='auto')
     plt.colorbar()
     plt.xticks(range(len(yX_abs_corr)), yX_abs_corr.columns, rotation='vertical')
     plt.yticks(range(len(yX_abs_corr)), yX_abs_corr.columns);
-    plt.suptitle('Pearson Correlation Heat Map (absolute values)', fontsize=15, fontweight='bold')
+    plt.suptitle('Pearson Correlation Heat Map', fontsize=10)
     plt.show()
   
   return yX, yX_corr, yX_abs_corr
 
 # Build the correlation matrix for the train data
-yX, yX_corr, yX_abs_corr = correlation_matrix(y_train, x_train_0, is_plot=True)
+yX, yX_corr, yX_abs_corr = correlation_matrix(y_train, x_train, is_plot=True)
 
 CORRELATION_MIN = 0.04
-DISPLAY_PRECISION = 4 
+
 # Sort features by their pearson correlation with the target value
 s_corr_target = yX_abs_corr['outcome']
 s_corr_target_sort = s_corr_target.sort_values(ascending=False)
 
-# Only use features with a minimum pearson correlation with the target of 0.05
-s_low_correlation_ftrs = s_corr_target_sort[s_corr_target_sort <= CORRELATION_MIN]
+# Only use features with a minimum pearson correlation with the target of 0.04
+low_correlation_ftrs = s_corr_target_sort[s_corr_target_sort <= CORRELATION_MIN]
 
-# Print
-print("Removed %d low correlation features:" % len(s_low_correlation_ftrs))
-for i,v in enumerate(s_low_correlation_ftrs):
-  print(i,np.round(v, DISPLAY_PRECISION), s_low_correlation_ftrs.index[i])
-  
-print("---")
+print("Removed low correlation features:")
+for i,v in enumerate(low_correlation_ftrs):
+  print(v, low_correlation_ftrs.index[i])
+
+print("--------")
 
 s_corr_target_sort = s_corr_target_sort[s_corr_target_sort > CORRELATION_MIN]
 
-print("Remaining %d feature correlations:" % (len(s_corr_target_sort)-1))
+print("Remaining feature correlations:")
 for i,v in enumerate(s_corr_target_sort):
   ftr = s_corr_target_sort.index[i]
-  if ftr == 'TARGET':
-    continue
-    
-  print(i,np.round(v, DISPLAY_PRECISION), ftr)
+  if ftr != 'outcome':
+    print(v, ftr)
 
 """# Model 1: Support Vector Machines"""
 
-clf = svm.SVC(kernel='linear')
-clf.fit(x_train_0, y_train)
-pred = clf.predict(x_test_0)
+clf = svm.SVC(kernel='rbf')
+clf.fit(x_train, y_train)
+svm_pred = clf.predict(x_test)
 
-print("Accuracy:",metrics.accuracy_score(y_test, pred))
-print("Precision:",metrics.precision_score(y_test, pred))
+print("Accuracy:",metrics.accuracy_score(y_test, svm_pred))
 
 from sklearn.metrics import classification_report, confusion_matrix
-print(confusion_matrix(y_test,pred))
-print(classification_report(y_test,pred))
+print(confusion_matrix(y_test,svm_pred))
+print(classification_report(y_test,svm_pred))
 
+"""# Model 2 : Linear Regression
+
+
+"""
+
+lr_model = linear_model.LinearRegression()
+lr_model.fit(x_train, y_train)
+# evaluate the model
+yhat = lr_model.predict(x_test)
+# evaluate predictions
+mae = mean_absolute_error(y_test, yhat)
+print('MAE: %.3f' % mae)
+
+"""# Model 3"""

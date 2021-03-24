@@ -399,11 +399,13 @@ for i,v in enumerate(s_corr_target_sort):
 
 """# Model 1: Support Vector Machines"""
 
-clf = svm.SVC(kernel='rbf')
+clf = svm.SVC(kernel='rbf',gamma=0.001, C=100)
 clf.fit(x_train, y_train)
 svm_pred = clf.predict(x_test)
 
 print("Accuracy:",metrics.accuracy_score(y_test, svm_pred))
+mae = mean_absolute_error(y_test, svm_pred)
+print('MAE: %.3f' % mae)
 
 from sklearn.metrics import classification_report, confusion_matrix
 print(confusion_matrix(y_test,svm_pred))
@@ -417,9 +419,17 @@ print(classification_report(y_test,svm_pred))
 lr_model = linear_model.LinearRegression()
 lr_model.fit(x_train, y_train)
 # evaluate the model
-yhat = lr_model.predict(x_test)
+lr_predict = lr_model.predict(x_test)
 # evaluate predictions
-mae = mean_absolute_error(y_test, yhat)
+mae = mean_absolute_error(y_test, lr_predict)
 print('MAE: %.3f' % mae)
 
 """# Model 3"""
+
+from sklearn.neighbors import KNeighborsClassifier
+knn = KNeighborsClassifier()
+knn.fit(x_train, y_train)
+KNeighborsClassifier()
+knn_predict=knn.predict(x_test)
+mae = mean_absolute_error(y_test, knn_predict)
+print('MAE: %.3f' % mae)

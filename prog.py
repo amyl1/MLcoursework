@@ -11,17 +11,19 @@ Original file is located at
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+
 from sklearn.impute import SimpleImputer
 from sklearn import svm
 from sklearn import linear_model
 from sklearn import metrics
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from sklearn import model_selection
+
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, classification_report, confusion_matrix, roc_curve, roc_auc_score
 from sklearn.cluster import KMeans
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
-import matplotlib.pyplot as plt
-from sklearn.metrics import roc_curve
-from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split
 
 """# Load Data
 Excluding any columns that will not be used
@@ -340,6 +342,17 @@ df = df[df['day_diff'].notna()]
 #use symptoms
 df=df[['age','continent','day_diff','outcome','chronic_disease_binary','travel_history_binary']]
 
+"""#ROC Curve Function"""
+
+def plot_roc_curve(fpr, tpr):
+    plt.plot(fpr, tpr, color='red', label='ROC')
+    plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curve')
+    plt.legend()
+    plt.show()
+
 """# Split the data into train and test sets"""
 
 #use symptoms?
@@ -406,13 +419,18 @@ print("Accuracy:",metrics.accuracy_score(y_test, svm_pred))
 mae = mean_absolute_error(y_test, svm_pred)
 print('MAE: %.3f' % mae)
 
-from sklearn.metrics import classification_report, confusion_matrix
 print(confusion_matrix(y_test,svm_pred))
 print(classification_report(y_test,svm_pred))
 
 """RoC curve"""
 
-from sklearn import model_selection
+probs = clf.predict_proba(x_test)
+probs = probs[:, 1]
+auc = roc_auc_score(y_test, probs)
+print('AUC: %.2f' % auc)
+fpr, tpr, thresholds = roc_curve(y_test, probs)
+plot_roc_curve(fpr, tpr)
+
 scoring = 'roc_auc'
 results = model_selection.cross_val_score(clf, x_test, y_test, scoring=scoring)
 print("AUC: %.3f (%.3f)" % (results.mean(), results.std()))
@@ -429,23 +447,39 @@ mae = mean_absolute_error(y_test, lr_predict)
 print('MAE: %.3f' % mae)
 print(lr_model.score(x, y))
 
-from sklearn import model_selection
+print(confusion_matrix(y_test, lr_predict.round()))
+print(classification_report(y_test, lr_predict.round()))
+
 scoring = 'roc_auc'
 results = model_selection.cross_val_score(lr_model, x_test, y_test, scoring=scoring)
 print("AUC: %.3f (%.3f)" % (results.mean(), results.std()))
 
+probs = lr_model.predict(x_test)
+auc = roc_auc_score(y_test, probs)
+print('AUC: %.2f' % auc)
+fpr, tpr, thresholds = roc_curve(y_test, probs)
+plot_roc_curve(fpr, tpr)
+
 """# Model 3: kNN"""
 
-from sklearn.neighbors import KNeighborsClassifier
-knn = KNeighborsClassifier()
+knn = KNeighborsClassifier(n_neighbors=)
 knn.fit(x_train, y_train)
-KNeighborsClassifier()
 knn_predict=knn.predict(x_test)
 mae = mean_absolute_error(y_test, knn_predict)
 print('MAE: %.3f' % mae)
 knn.score(x, y)
 
+print(confusion_matrix(y_test, knn_predict))
+print(classification_report(y_test, knn_predict))
+
 from sklearn import model_selection
 scoring = 'roc_auc'
-results = model_selection.cross_val_score(knn, x_test, y_test, scoring=scoring)
+results = model_selection.cross_val_score(knn,  y_test, x_test,scoring=scoring)
 print("AUC: %.3f (%.3f)" % (results.mean(), results.std()))
+
+probs = knn.predict_proba(x_test)
+probs = probs[:, 1]
+auc = roc_auc_score(y_test, probs)
+print('AUC: %.2f' % auc)
+fpr, tpr, thresholds = roc_curve(y_test, probs)
+plot_roc_curve(fpr, tpr)

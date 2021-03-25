@@ -11,20 +11,17 @@ Original file is located at
 
 import pandas as pd
 import numpy as np
-import math
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from sklearn import svm
 from sklearn import linear_model
 from sklearn import metrics
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LogisticRegression
-import matplotlib.pyplot as plt 
-from sklearn.datasets import make_regression
-from sklearn.model_selection import train_test_split
-from sklearn.feature_selection import SelectKBest
-from sklearn.metrics import mean_absolute_error
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
 
 """# Load Data
 Excluding any columns that will not be used
@@ -399,9 +396,11 @@ for i,v in enumerate(s_corr_target_sort):
 
 """# Model 1: Support Vector Machines"""
 
-clf = svm.SVC(kernel='rbf',gamma=0.001, C=100)
+clf = svm.SVC(kernel='rbf',gamma=0.001, C=100, probability=True)
 clf.fit(x_train, y_train)
+
 svm_pred = clf.predict(x_test)
+clf.score(x, y)
 
 print("Accuracy:",metrics.accuracy_score(y_test, svm_pred))
 mae = mean_absolute_error(y_test, svm_pred)
@@ -411,6 +410,13 @@ from sklearn.metrics import classification_report, confusion_matrix
 print(confusion_matrix(y_test,svm_pred))
 print(classification_report(y_test,svm_pred))
 
+"""RoC curve"""
+
+from sklearn import model_selection
+scoring = 'roc_auc'
+results = model_selection.cross_val_score(clf, x_test, y_test, scoring=scoring)
+print("AUC: %.3f (%.3f)" % (results.mean(), results.std()))
+
 """# Model 2 : Linear Regression
 
 
@@ -418,13 +424,17 @@ print(classification_report(y_test,svm_pred))
 
 lr_model = linear_model.LinearRegression()
 lr_model.fit(x_train, y_train)
-# evaluate the model
 lr_predict = lr_model.predict(x_test)
-# evaluate predictions
 mae = mean_absolute_error(y_test, lr_predict)
 print('MAE: %.3f' % mae)
+print(lr_model.score(x, y))
 
-"""# Model 3"""
+from sklearn import model_selection
+scoring = 'roc_auc'
+results = model_selection.cross_val_score(lr_model, x_test, y_test, scoring=scoring)
+print("AUC: %.3f (%.3f)" % (results.mean(), results.std()))
+
+"""# Model 3: kNN"""
 
 from sklearn.neighbors import KNeighborsClassifier
 knn = KNeighborsClassifier()
@@ -433,3 +443,9 @@ KNeighborsClassifier()
 knn_predict=knn.predict(x_test)
 mae = mean_absolute_error(y_test, knn_predict)
 print('MAE: %.3f' % mae)
+knn.score(x, y)
+
+from sklearn import model_selection
+scoring = 'roc_auc'
+results = model_selection.cross_val_score(knn, x_test, y_test, scoring=scoring)
+print("AUC: %.3f (%.3f)" % (results.mean(), results.std()))

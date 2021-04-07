@@ -78,17 +78,17 @@ mapOutcome = {
 }
 df['outcome']=df['outcome'].map(mapOutcome)
 
-"""Create a vector of symptoms"""
+"""Map symptoms to integer"""
 
 mapSymptom = {
-    "fever" : [0,1,0,0,0,0,0,0,0],
-    "Mild to moderate" : [1,0,0,0,0,0,0,0,0],
-    "Mild:moderate" : [1,0,0,0,0,0,0,0,0],
-    "cough, fever" : [0,1,1,0,0,0,0,0,0],
-    "cough" : [0,0,1,0,0,0,0,0,0],
-    "fever, myalgia" : [0,1,0,1,0,0,0,0,0],
-    "pneumonia:acute respiratory failure:heart failure" : [0,0,0,0,1,1,1,0,0],
-    "cardiogenic shock:acute coronary syndrome:heart failure:pneumonia" : [0,0,0,0,1,0,1,1,1],
+    "fever" : 1,
+    "Mild to moderate" : 2,
+    "Mild:moderate" : 2,
+    "cough, fever" : 3,
+    "cough" : 4,
+    "fever, myalgia" : 5,
+    "pneumonia:acute respiratory failure:heart failure" : 6,
+    "cardiogenic shock:acute coronary syndrome:heart failure:pneumonia" : 7,
 }
 df['symptoms']=df['symptoms'].map(mapSymptom)
 
@@ -313,17 +313,17 @@ df['age']=imp.fit_transform(df[['age']]).ravel()
 
 """
 
-df['outcome'] = df['outcome'].fillna(0.0)
 df['chronic_disease_binary'] = df['chronic_disease_binary'].fillna(0.0)
 df['travel_history_binary'] = df['travel_history_binary'].fillna(0)
 
 """If no symptoms recorded, but 0 in every position in the vector"""
 
-df.loc[df['symptoms'].isnull(),['symptoms']] = df.loc[df['symptoms'].isnull(),'symptoms'].apply(lambda x: [0,0,0,0,0,0,0,0,0])
+#df.loc[df['symptoms'].isnull(),['symptoms']] = df.loc[df['symptoms'].isnull(),'symptoms'].apply(lambda x: [0,0,0,0,0,0,0,0,0])
 
 """Drop rows with missing continent"""
 
 df = df[df['continent'].notna()]
+df = df[df['outcome'].notna()]
 
 """# Process Dates
 Use pandas.to_datetime to parse the dates
@@ -359,7 +359,7 @@ def plot_roc_curve(fpr, tpr):
 x=df[['age','continent','chronic_disease_binary','travel_history_binary','day_diff']]
 y = df['outcome']
 
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=1)
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42,stratify=y)
 
 print('Train', x_train.shape, y_train.shape)
 print('Test', x_test.shape, y_test.shape)
@@ -387,11 +387,11 @@ yX, yX_corr, yX_abs_corr = correlation_matrix(y_train, x_train, is_plot=True)
 CORRELATION_MIN = 0.04
 
 # Sort features by their pearson correlation with the target value
-s_corr_target = yX_abs_corr['outcome']
-s_corr_target_sort = s_corr_target.sort_values(ascending=False)
+corr_target = yX_abs_corr['outcome']
+corr_target_sort = corr_target.sort_values(ascending=False)
 
 # Only use features with a minimum pearson correlation with the target of 0.04
-low_correlation_ftrs = s_corr_target_sort[s_corr_target_sort <= CORRELATION_MIN]
+low_correlation_ftrs = corr_target_sort[corr_target_sort <= CORRELATION_MIN]
 
 print("Removed low correlation features:")
 for i,v in enumerate(low_correlation_ftrs):
@@ -399,13 +399,13 @@ for i,v in enumerate(low_correlation_ftrs):
 
 print("--------")
 
-s_corr_target_sort = s_corr_target_sort[s_corr_target_sort > CORRELATION_MIN]
+corr_target_sort = corr_target_sort[corr_target_sort > CORRELATION_MIN]
 
 print("Remaining feature correlations:")
-for i,v in enumerate(s_corr_target_sort):
-  ftr = s_corr_target_sort.index[i]
-  if ftr != 'outcome':
-    print(v, ftr)
+for i,v in enumerate(corr_target_sort):
+  feature = corr_target_sort.index[i]
+  if feature != 'outcome':
+    print(v, feature)
 
 """# Model 1: Support Vector Machines"""
 
@@ -462,7 +462,7 @@ plot_roc_curve(fpr, tpr)
 
 """# Model 3: kNN"""
 
-knn = KNeighborsClassifier(n_neighbors=)
+knn = KNeighborsClassifier(n_neighbors=3)
 knn.fit(x_train, y_train)
 knn_predict=knn.predict(x_test)
 mae = mean_absolute_error(y_test, knn_predict)

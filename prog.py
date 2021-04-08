@@ -24,6 +24,7 @@ from sklearn.cluster import KMeans
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV
 
 """# Load Data
 Excluding any columns that will not be used
@@ -305,24 +306,25 @@ df=df[['age','continent','date_onset_symptoms','date_confirmation','symptoms','o
 Impute age using mean strategy
 """
 
-imp = SimpleImputer(missing_values=np.nan, strategy='mean')
-df['age']=imp.fit_transform(df[['age']]).ravel()
+impAge = SimpleImputer(missing_values=np.nan, strategy='mean')
+df['age']=impAge.fit_transform(df[['age']]).ravel()
 
-"""Replace NaN with 0 in outcome, chronic_disease_binary, travel_history_binary.
+"""Impute contient using most frequent strategy"""
+
+impCont = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
+df['continent']=impCont.fit_transform(df[['continent']]).ravel()
+
+"""Replace NaN with 0 in chronic_disease_binary, symptoms and travel_history_binary.
 
 
 """
 
 df['chronic_disease_binary'] = df['chronic_disease_binary'].fillna(0.0)
 df['travel_history_binary'] = df['travel_history_binary'].fillna(0)
+df['symptoms'] = df['symptoms'].fillna(0)
 
-"""If no symptoms recorded, but 0 in every position in the vector"""
+"""Drop rows with missing outcome"""
 
-#df.loc[df['symptoms'].isnull(),['symptoms']] = df.loc[df['symptoms'].isnull(),'symptoms'].apply(lambda x: [0,0,0,0,0,0,0,0,0])
-
-"""Drop rows with missing continent"""
-
-df = df[df['continent'].notna()]
 df = df[df['outcome'].notna()]
 
 """# Process Dates
@@ -339,8 +341,7 @@ df = df[df['day_diff'].notna()]
 
 """Remove date_onset_symptoms or date_confirmation columns"""
 
-#use symptoms
-df=df[['age','continent','day_diff','outcome','chronic_disease_binary','travel_history_binary']]
+df=df[['age','continent','day_diff','outcome','chronic_disease_binary','travel_history_binary','symptoms']]
 
 """#ROC Curve Function"""
 
@@ -355,18 +356,20 @@ def plot_roc_curve(fpr, tpr):
 
 """# Split the data into train and test sets"""
 
-#use symptoms?
-x=df[['age','continent','chronic_disease_binary','travel_history_binary','day_diff']]
+from sklearn.preprocessing import OneHotEncoder
+x=df[['age','continent','chronic_disease_binary','travel_history_binary','day_diff','symptoms']]
 y = df['outcome']
-
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42,stratify=y)
+enc = OneHotEncoder(handle_unknown='ignore')
+enc.fit(x)
+x_enc=enc.transform(x).toarray()
+x_train, x_test, y_train, y_test = train_test_split(x_enc, y, test_size=0.2, random_state=42,stratify=y)
 
 print('Train', x_train.shape, y_train.shape)
 print('Test', x_test.shape, y_test.shape)
 
 def correlation_matrix(y, x, is_plot=False):
   
-  yX = pd.concat([y, x], axis=1)
+  yX = df
   yX_corr = yX.corr(method='pearson')
   yX_abs_corr = np.abs(yX_corr) 
   
@@ -384,7 +387,7 @@ def correlation_matrix(y, x, is_plot=False):
 # Build the correlation matrix for the train data
 yX, yX_corr, yX_abs_corr = correlation_matrix(y_train, x_train, is_plot=True)
 
-CORRELATION_MIN = 0.04
+CORRELATION_MIN = 0.05
 
 # Sort features by their pearson correlation with the target value
 corr_target = yX_abs_corr['outcome']
@@ -407,13 +410,32 @@ for i,v in enumerate(corr_target_sort):
   if feature != 'outcome':
     print(v, feature)
 
-"""# Model 1: Support Vector Machines"""
+"""# Model 1: Support Vector Machines
 
-clf = svm.SVC(kernel='rbf',gamma=0.001, C=100, probability=True)
+Use grid search to find the best parameters
+"""
+
+parameters = {'C': [0.1, 1, 10, 100, 1000], 
+              'gamma': [0.01, 0.001, 0.0001],
+              'kernel': ['rbf']}
+
+svc = svm.SVC(gamma="scale")
+clf = GridSearchCV(svc, parameters, cv=5)
+clf.fit(x_train, y_train)
+parameter_df = pd.DataFrame(clf.cv_results_)
+
+print(parameter_df[['param_C','param_gamma','mean_test_score','std_test_score','rank_test_score']])
+
+print(clf.best_params_)
+
+"""Use these optimal parameters in the model"""
+
+clf = svm.SVC(C=100, gamma=0.01, kernel='rbf', probability=True)
 clf.fit(x_train, y_train)
 
 svm_pred = clf.predict(x_test)
-clf.score(x, y)
+#check this
+clf.score(x_test, y_test)
 
 print("Accuracy:",metrics.accuracy_score(y_test, svm_pred))
 mae = mean_absolute_error(y_test, svm_pred)
@@ -445,7 +467,7 @@ lr_model.fit(x_train, y_train)
 lr_predict = lr_model.predict(x_test)
 mae = mean_absolute_error(y_test, lr_predict)
 print('MAE: %.3f' % mae)
-print(lr_model.score(x, y))
+print(lr_model.score(x_test, y_test))
 
 print(confusion_matrix(y_test, lr_predict.round()))
 print(classification_report(y_test, lr_predict.round()))
@@ -462,12 +484,23 @@ plot_roc_curve(fpr, tpr)
 
 """# Model 3: kNN"""
 
-knn = KNeighborsClassifier(n_neighbors=3)
+from sklearn.model_selection import cross_val_score
+k_range = range(1, 30)
+max_score=0.0
+for k in k_range:
+    knn = KNeighborsClassifier(n_neighbors=k)
+    scores = cross_val_score(knn, x_train, y_train, cv=10, scoring='accuracy')
+    if scores.mean() > max_score:
+      max_score=scores.mean()
+      best_k=k
+print(best_k)
+
+knn = KNeighborsClassifier(n_neighbors=best_k)
 knn.fit(x_train, y_train)
 knn_predict=knn.predict(x_test)
 mae = mean_absolute_error(y_test, knn_predict)
 print('MAE: %.3f' % mae)
-knn.score(x, y)
+print('Score: %.3f'%knn.score(x_test, y_test))
 
 print(confusion_matrix(y_test, knn_predict))
 print(classification_report(y_test, knn_predict))

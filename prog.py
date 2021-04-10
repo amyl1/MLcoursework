@@ -15,14 +15,16 @@ import matplotlib.pyplot as plt
 
 from sklearn.impute import SimpleImputer
 from sklearn import svm
+from sklearn import tree
 from sklearn import linear_model
 from sklearn import metrics
 from sklearn import model_selection
 
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, classification_report, confusion_matrix, roc_curve, roc_auc_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, classification_report, confusion_matrix, roc_curve, roc_auc_score 
+
+
 from sklearn.cluster import KMeans
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 
@@ -362,7 +364,7 @@ y = df['outcome']
 enc = OneHotEncoder(handle_unknown='ignore')
 enc.fit(x)
 x_enc=enc.transform(x).toarray()
-x_train, x_test, y_train, y_test = train_test_split(x_enc, y, test_size=0.2, random_state=42,stratify=y)
+x_train, x_test, y_train, y_test = train_test_split(x_enc, y, test_size=0.3, random_state=42,stratify=y)
 
 print('Train', x_train.shape, y_train.shape)
 print('Test', x_test.shape, y_test.shape)
@@ -430,7 +432,7 @@ print(clf.best_params_)
 
 """Use these optimal parameters in the model"""
 
-clf = svm.SVC(C=100, gamma=0.01, kernel='rbf', probability=True)
+clf = svm.SVC(C=10, gamma=0.01, kernel='rbf', probability=True)
 clf.fit(x_train, y_train)
 
 svm_pred = clf.predict(x_test)
@@ -457,30 +459,30 @@ scoring = 'roc_auc'
 results = model_selection.cross_val_score(clf, x_test, y_test, scoring=scoring)
 print("AUC: %.3f (%.3f)" % (results.mean(), results.std()))
 
-"""# Model 2 : Linear Regression
+"""# Model 2 : Decision Tree
 
 
 """
 
-lr_model = linear_model.LinearRegression()
-lr_model.fit(x_train, y_train)
-lr_predict = lr_model.predict(x_test)
-mae = mean_absolute_error(y_test, lr_predict)
+tree_model = tree.DecisionTreeClassifier()
+tree_model.fit(x_train, y_train)
+tree_predict = tree_model.predict(x_test)
+mae = mean_absolute_error(y_test, tree_predict)
+print("Accuracy:",metrics.accuracy_score(y_test, tree_predict))
 print('MAE: %.3f' % mae)
-print(lr_model.score(x_test, y_test))
-
-print(confusion_matrix(y_test, lr_predict.round()))
-print(classification_report(y_test, lr_predict.round()))
+print('Score: %.3f'%tree_model.score(x_test, y_test))
 
 scoring = 'roc_auc'
-results = model_selection.cross_val_score(lr_model, x_test, y_test, scoring=scoring)
+results = model_selection.cross_val_score(tree_model, x_test, y_test, scoring=scoring)
 print("AUC: %.3f (%.3f)" % (results.mean(), results.std()))
 
-probs = lr_model.predict(x_test)
+probs = tree_model.predict(x_test)
 auc = roc_auc_score(y_test, probs)
 print('AUC: %.2f' % auc)
 fpr, tpr, thresholds = roc_curve(y_test, probs)
 plot_roc_curve(fpr, tpr)
+
+print(classification_report(y_test, tree_predict))
 
 """# Model 3: kNN"""
 
@@ -499,10 +501,10 @@ knn = KNeighborsClassifier(n_neighbors=best_k)
 knn.fit(x_train, y_train)
 knn_predict=knn.predict(x_test)
 mae = mean_absolute_error(y_test, knn_predict)
+print("Accuracy:",metrics.accuracy_score(y_test, knn_predict))
 print('MAE: %.3f' % mae)
 print('Score: %.3f'%knn.score(x_test, y_test))
 
-print(confusion_matrix(y_test, knn_predict))
 print(classification_report(y_test, knn_predict))
 
 from sklearn import model_selection
@@ -513,6 +515,9 @@ print("AUC: %.3f (%.3f)" % (results.mean(), results.std()))
 probs = knn.predict_proba(x_test)
 probs = probs[:, 1]
 auc = roc_auc_score(y_test, probs)
-print('AUC: %.2f' % auc)
+print('AUC: %.3f' % auc)
 fpr, tpr, thresholds = roc_curve(y_test, probs)
 plot_roc_curve(fpr, tpr)
+
+"""# Comparisons"""
+

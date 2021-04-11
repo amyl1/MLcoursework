@@ -45,7 +45,7 @@ Map patient outcome to show severity of illness. Mapped to 0 if the patitent rec
 
 mapOutcome = {
     "Alive": 0,
-    "Critical condition": 0, 
+    "Critical condition": 1, 
     "Dead": 1,
     "Death": 1,
     "Deceased": 1,
@@ -60,8 +60,8 @@ mapOutcome = {
     "Stable": 0,
     "Symptoms only improved with cough. Currently hospitalized for follow-up.": 0,
     "Under treatment": 0,
-    "critical condition": 0,
-    "critical condition, intubated as of 14.02.2020": 0,
+    "critical condition": 1,
+    "critical condition, intubated as of 14.02.2020": 1,
     "dead": 1,
     "death": 1,
     "died": 1,
@@ -72,12 +72,12 @@ mapOutcome = {
     "recovered": 0,
     "recovering at home 03.03.2020" : 0,
     "released from quarantine": 0,
-    "severe": 0,
-    "severe illness": 0,
+    "severe": 1,
+    "severe illness": 1,
     "stable": 0,
     "stable condition": 0,
-    "treated in an intensive care unit (14.02.2020)": 0,
-    "unstable": 0,
+    "treated in an intensive care unit (14.02.2020)": 1,
+    "unstable": 1,
 }
 df['outcome']=df['outcome'].map(mapOutcome)
 
@@ -432,7 +432,7 @@ print(clf.best_params_)
 
 """Use these optimal parameters in the model"""
 
-clf = svm.SVC(C=10, gamma=0.01, kernel='rbf', probability=True)
+clf = svm.SVC(C=100, gamma=0.01, kernel='rbf', probability=True)
 clf.fit(x_train, y_train)
 
 svm_pred = clf.predict(x_test)
@@ -451,7 +451,6 @@ print(classification_report(y_test,svm_pred))
 probs = clf.predict_proba(x_test)
 probs = probs[:, 1]
 auc = roc_auc_score(y_test, probs)
-print('AUC: %.2f' % auc)
 fpr, tpr, thresholds = roc_curve(y_test, probs)
 plot_roc_curve(fpr, tpr)
 

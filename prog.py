@@ -34,9 +34,14 @@ Excluding any columns that will not be used
 
 df = pd.read_csv("latestdata.csv",low_memory=False)
 
-df=df[['age','country','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary','travel_history_binary']]
+print(df['reported_market_exposure'].isnull().values.ravel().sum())
 
+df=df[['age','country','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary','travel_history_binary']]
 print(df.shape)
+
+"""Investigate the number of missing values in various columns. """
+
+print(df['outcome'].isnull().values.ravel().sum())
 
 """# Mapping Data
 

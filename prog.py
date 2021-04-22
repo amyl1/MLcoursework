@@ -29,23 +29,24 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 
 """# Load Data
-Excluding any columns that will not be used
+Load data from csv file to pandas dataframe
 """
 
 df = pd.read_csv("latestdata.csv",low_memory=False)
 
-print(df['reported_market_exposure'].isnull().values.ravel().sum())
-
-df=df[['age','country','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary','travel_history_binary']]
-print(df.shape)
-
 """Investigate the number of missing values in various columns. """
+
+print(df['reported_market_exposure'].isnull().values.ravel().sum())
 
 print(df['outcome'].isnull().values.ravel().sum())
 
+"""Exclude columns that will not be used"""
+
+df=df[['age','country','date_onset_symptoms','date_confirmation','symptoms','outcome','chronic_disease_binary','travel_history_binary']]
+
 """# Mapping Data
 
-Map patient outcome to show severity of illness. Mapped to 0 if the patitent recovered, map to 1 if the patient died
+Map patient outcome to show severity of illness. Mapped to 0 if the patitent recovered, map to 1 if the patient died or became severely ill
 """
 
 mapOutcome = {
@@ -290,7 +291,7 @@ mapTHB = {
 }
 df['travel_history_binary']=df['travel_history_binary'].replace(mapTHB)
 
-"""Map countires to conitents. Create a new column for continent and drop the country column"""
+"""Map countires to continents. Create a new column for continent and drop the country column"""
 
 asia = ["Singapore","China","Vietnam","South Korea","Malaysia","Philippines","Japan","Iran","United Arab Emirates","Nepal"]
 southAmerica=["Brazil","Guyana"]
@@ -522,6 +523,3 @@ auc = roc_auc_score(y_test, probs)
 print('AUC: %.3f' % auc)
 fpr, tpr, thresholds = roc_curve(y_test, probs)
 plot_roc_curve(fpr, tpr)
-
-"""# Comparisons"""
-
